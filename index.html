@@ -336,19 +336,48 @@
 
       // From components/MenuItemCard.tsx
       const MenuItemCard = ({ item, onSelect }) => {
+        const [imageSrc, setImageSrc] = useState(null);
+        const cardRef = useRef(null);
+
+        useEffect(() => {
+          const observer = new IntersectionObserver(
+            ([entry]) => {
+              if (entry.isIntersecting) {
+                setImageSrc(item.imageUrls[0]);
+                observer.unobserve(cardRef.current);
+              }
+            },
+            { rootMargin: '200px' } // Load 200px before it's visible
+          );
+
+          if (cardRef.current) {
+            observer.observe(cardRef.current);
+          }
+
+          return () => {
+            if (cardRef.current) {
+              observer.disconnect();
+            }
+          };
+        }, []);
+
         return (
-          <div 
+          <div
+            ref={cardRef}
             className="bg-brand-card rounded-lg shadow-md shadow-stone-400/20 hover:shadow-lg hover:shadow-brand-accent/20 transition-all duration-300 flex items-stretch cursor-pointer group overflow-hidden"
             onClick={() => onSelect(item)}
             role="button"
             aria-label={`Ver detalles de ${item.name}`}
           >
-            <div className="w-1/3 flex-shrink-0">
-              <img
-                src={item.imageUrls[0]}
-                alt={item.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
+            <div className="w-1/3 flex-shrink-0 bg-stone-200">
+              {imageSrc && (
+                <img
+                  src={imageSrc}
+                  alt={item.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-opacity duration-500 opacity-0"
+                  onLoad={(e) => e.target.classList.add('opacity-100')}
+                />
+              )}
             </div>
             <div className="p-3 sm:p-4 flex flex-col flex-grow w-2/3">
               <h3 className="text-md sm:text-lg font-bold text-brand-text mb-1 truncate">{item.name}</h3>
@@ -679,13 +708,13 @@
       
       // From components/ItemDetailView.tsx
       const ItemDetailView = ({ item, onClose }) => {
-        const [currentImageIndex, setCurrentImageIndex] = useState(0);
+        const [isImageLoaded, setIsImageLoaded] = useState(false);
 
         useEffect(() => {
           const scrollContainer = document.querySelector('.main-scroll-container');
           if (item) {
             if (scrollContainer) scrollContainer.style.overflowY = 'hidden';
-            setCurrentImageIndex(0);
+            setIsImageLoaded(false); // Reset image loaded state on new item
           } else {
             if (scrollContainer) scrollContainer.style.overflowY = 'auto';
           }
@@ -723,7 +752,12 @@
                 </div>
                 <div className="flex-grow overflow-y-auto no-scrollbar">
                   <div className="relative w-full h-2/5 flex-shrink-0 bg-stone-200">
-                    <img src={item.imageUrls[0]} alt={item.name} className="w-full h-full object-cover"/>
+                    <img
+                      src={item.imageUrls[0]}
+                      alt={item.name}
+                      className={`w-full h-full object-cover transition-opacity duration-500 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                      onLoad={() => setIsImageLoaded(true)}
+                    />
                   </div>
                   <div className="p-4 sm:p-6 space-y-4">
                     <div className="flex justify-between items-start">
